@@ -111,3 +111,23 @@ class Projeqtor:
                     f"Невалидный JSON. Позиция: {e.pos}. "
                     f"Контекст: {repr(clean_text[max(0, e.pos-30):e.pos+30])}"
                 )
+    def get_all(self, class_name: str):
+        """Универсальный GET-запрос для чтения объектов."""
+        url = f"{self.base_url}/api/{class_name}/all"
+        with httpx.Client(
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx"},
+            auth=httpx.BasicAuth(username=self.username, password=self.password),
+            timeout=15.0
+        ) as client:
+            response = client.get(url)
+            
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type:
+                raise RuntimeError(
+                    "Сервер вернул HTML вместо JSON. "
+                    "Проверьте, включен ли API."
+                )
+            
+            response.raise_for_status()
+            return self._safe_json_parse(response)
