@@ -1,20 +1,39 @@
+import logging
+import os
+from dotenv import load_dotenv
+
 from projeqtor import Projeqtor
-import json
-import time
+from excel_reader import WBS
+from loader import ActivityLoader
 
-tickets = [
-    42748, 42802, 41141, 41101, 42688, 42687, 42510, 41952, 41951,
-    41939, 41937, 41935, 41934, 41924, 41922, 41880, 41867, 41859,
-    41882, 43416, 43417, 43418, 43419, 40822, 42410, 42168, 41501,
-    42601, 42705, 41078, 42257, 40991, 40994, 41065, 42266, 40979,
-    40981, 40987, 41003, 41006, 41009, 42181, 42247
-]
+load_dotenv()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
-# tickets = [42748]
 
-for ticket in tickets:
-    data = Projeqtor(ticket)
-    data_ = data.get_tickets()
-    with open (f'tickets/jsons/{str(ticket)}.json', 'w', encoding='utf-8') as file:
-        json.dump(data_, file, ensure_ascii=False, indent = 4)
-    time.sleep(2)
+if __name__ == "__main__":
+    client = Projeqtor()
+
+    # 2. Парсим Excel и строим порядок загрузки
+    wbs = WBS(os.getenv("FILE_PATH"))
+    order, rows_by_wbs = wbs.build_load_order()
+    logging.info(f"Найдено задач: {len(order)}")
+    logging.info(f"Порядок загрузки: {order}")
+
+    # 3. Загружаем
+    loader = ActivityLoader(
+        projeqtor_client=client,
+        project_id=int(os.getenv("PJ_DEFAULT_PROJECT_ID")),
+        activity_type_id=int(os.getenv("PJ_DEFAULT_ACTIVITY_TYPE_ID")),
+        status_id=int(os.getenv("PJ_DEFAULT_STATUS_ID")),
+        planning_mode_id=int(os.getenv("PJ_DEFAULT_PLANNING_MODE_ID")),
+    )
+
+    mapping = loader.load(order, rows_by_wbs)
+
+    logging.info(f"Загружено {len(mapping)} задач.")
+    logging.info("Маппинг WBS -> ProjeQtOr id:")
+    for wbs_code, pq_id in mapping.items():
+        logging.info(f"  {wbs_code} -> {pq_id}")
