@@ -55,10 +55,14 @@ class Projeqtor:
         # 5. Добавление nonce в начало и кодирование в Base64
         return base64.b64encode(nonce + ciphertext).decode('utf-8')
 
+    def log(self, event_name, info):
+        # info - это словарь с деталями события
+        print(f"[TRACE] {event_name} | {info}")
+
+
     def post_activity(self, activity_data: dict):
-        url = f"{self.base_url}/api/Activity"
-        
-        # Сериализация и шифрование
+        url = f"{self.base_url}/api/index.php?uri=Activity"
+        print(self.base_url)
         json_payload = json.dumps(activity_data, ensure_ascii=False)
         encrypted_data = self._encrypt_data(json_payload)
         
@@ -66,24 +70,48 @@ class Projeqtor:
             follow_redirects=True,
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx",
-                "Content-Type": "application/octet-stream" 
+                "Content-Type": "application/json" 
             },
             auth=httpx.BasicAuth(username=self.username, password=self.password),
             timeout=15.0
         ) as client:
-            # ПЕРЕДАЧА ДАННЫХ В ТЕЛЕ ЗАПРОСА (надёжнее для POST)
-            response = client.post(url, content=encrypted_data)
+            response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
             
-            # Защита от HTML
             content_type = response.headers.get("content-type", "")
             if "text/html" in content_type:
                 raise RuntimeError(
-                    "Сервер вернул HTML вместо JSON. "
-                    "Проверьте, включен ли API и настроен ли .htaccess в папке /api/."
+                    "Сервер вернул HTML вместо JSON."
                 )
             
             response.raise_for_status()
+            print(response.status_code)
+            return self._safe_json_parse(response)
+
+    def post_dependency(self, dependency_data:dict):
+        url = f"{self.base_url}/api/index.php?uri=Dependency"
+        print(self.base_url)
+        json_payload = json.dumps(dependency_data, ensure_ascii=False)
+        encrypted_data = self._encrypt_data(json_payload)
+        
+        with httpx.Client(
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx",
+                "Content-Type": "application/json" 
+            },
+            auth=httpx.BasicAuth(username=self.username, password=self.password),
+            timeout=15.0
+        ) as client:
+            response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
             
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type:
+                raise RuntimeError(
+                    "Сервер вернул HTML вместо JSON."
+                )
+            
+            response.raise_for_status()
+            print(response.status_code)
             return self._safe_json_parse(response)
     
     def _safe_json_parse(self, response):
@@ -93,7 +121,7 @@ class Projeqtor:
         # Ищем начало JSON
         start = text.find('{')
         if start == -1:
-            raise ValueError(f"JSON не найден в ответе. Начало: {text[:200]}")
+            raise ValueError(f"JSON не найден в ответе. Начало: {text}")#[:200]
         
         clean_text = text[start:]
         
@@ -109,11 +137,14 @@ class Projeqtor:
             except:
                 raise ValueError(
                     f"Невалидный JSON. Позиция: {e.pos}. "
-                    f"Контекст: {repr(clean_text[max(0, e.pos-30):e.pos+30])}"
+                    # f"Контекст: {repr(clean_text[max(0, e.pos-30):e.pos+30])}"
+                    f"Контекст: {repr(clean_text)}"
+
                 )
     def get_all(self, class_name: str):
         """Универсальный GET-запрос для чтения объектов."""
-        url = f"{self.base_url}/api/{class_name}/all"
+        url = f"{self.base_url}/api/index.php?uri={class_name}/all"
+        # url = f"{self.base_url}/api/{class_name}/all"
         with httpx.Client(
             follow_redirects=True,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx"},

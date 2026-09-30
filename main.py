@@ -197,13 +197,15 @@ class ProjeqtorShell(cmd.Cmd):
             projeqtor_client=client,
             project_id=int(os.getenv("PJ_DEFAULT_PROJECT_ID", "1")),
             activity_type_id=int(os.getenv("PJ_DEFAULT_ACTIVITY_TYPE_ID", "1")),
-            status_id=int(os.getenv("PJ_DEFAULT_STATUS_ID", "1")),
-            planning_mode_id=int(os.getenv("PJ_DEFAULT_PLANNING_MODE_ID", "1")),
+            status_id=int(os.getenv("PJ_DEFAULT_STATUS_ID", "1"))
         )
         mapping = loader.load(order, rows_by_wbs)
         print(f"Загружено {len(mapping)} задач.")
         for wbs_code, pq_id in mapping.items():
             print(f"  {wbs_code} -> {pq_id}")
+
+
+
 
     # --- Автодополнение по Tab ---
     def complete_config(self, text, line, begidx, endidx):
