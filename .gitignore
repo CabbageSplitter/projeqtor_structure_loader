@@ -3,6 +3,6 @@ test.py
 __pycache__
 venv
 /dist/
-/build/
+build
 test_run_load.py
 test_parse_successor.py
