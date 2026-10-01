@@ -83,22 +83,43 @@ class ActivityLoader:
             row = rows_by_wbs[wbs]
             if pd.isna(row['Successor']) or row['Successor'] == '': continue
             else:
-                payload = {
-                    'predecessorRefType': 'Activity',
-                    'predecessorRefId': self.wbs_to_pq_id[row['id']],
-                    'successorRefType': 'Activity',
-                    'successorRefId': self.wbs_to_pq_id[row['Successor']],
-                    'dependencyType': row['DependencyType'],
-                }
-                result_successor=self.client.post_dependency(payload)
-                items = result_successor.get("items", [])
-                
-                if not items or items[0].get("apiResult") != "OK":
-                    raise RuntimeError(
-                        "Ошибка создания Dependency"
-                    )
-                elif items[0].get("apiResult") == "OK":
-                    print('Dependency создан успешно')
+                successor_ids = row['Successor'].split(',')
+                if len(successor_ids) > 1:
+                    for successor_id in successor_ids:
+                        successor_id = successor_id.strip()
+                        payload = {
+                            'predecessorRefType': 'Activity',
+                            'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                            'successorRefType': 'Activity',
+                            'successorRefId': self.wbs_to_pq_id[successor_id],
+                            'dependencyType': row['DependencyType'],
+                        }
+                        result_successor=self.client.post_dependency(payload)
+                        items = result_successor.get("items", [])
+                        
+                        if not items or items[0].get("apiResult") != "OK":
+                            raise RuntimeError(
+                                "Ошибка создания Dependency"
+                            )
+                        elif items[0].get("apiResult") == "OK":
+                            print('Dependency создан успешно')
+                else:
+                    payload = {
+                        'predecessorRefType': 'Activity',
+                        'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                        'successorRefType': 'Activity',
+                        'successorRefId': self.wbs_to_pq_id[row['Successor']],
+                        'dependencyType': row['DependencyType'],
+                    }
+                    result_successor=self.client.post_dependency(payload)
+                    items = result_successor.get("items", [])
+                    
+                    if not items or items[0].get("apiResult") != "OK":
+                        raise RuntimeError(
+                            "Ошибка создания Dependency"
+                        )
+                    elif items[0].get("apiResult") == "OK":
+                        print('Dependency создан успешно')
 
         return self.wbs_to_pq_id
         # return [1, 2]

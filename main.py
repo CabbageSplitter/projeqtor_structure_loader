@@ -46,16 +46,15 @@ def get_env_path():
 def ensure_env_exists(env_path: Path):
     if not env_path.exists():
         default_env = """# ProjeQtOr API настройки
-PJ_URL=http://localhost:8080
-PJ_LOGIN=admin
+PJ_URL=http://localhost:8083
+PJ_LOGIN=
 PJ_PASSWORD=
 PJ_API_KEY=
 
 # ID справочников
-PJ_DEFAULT_PROJECT_ID=1
+PJ_DEFAULT_PROJECT_ID=2
 PJ_DEFAULT_ACTIVITY_TYPE_ID=1
 PJ_DEFAULT_STATUS_ID=1
-PJ_DEFAULT_PLANNING_MODE_ID=1
 """
         env_path.write_text(default_env, encoding="utf-8")
         logger.info(f"Создан файл конфигурации: {env_path}")
@@ -129,7 +128,7 @@ class ProjeqtorShell(cmd.Cmd):
             keys = [
                 "PJ_URL", "PJ_LOGIN", "PJ_PASSWORD", "PJ_API_KEY",
                 "PJ_DEFAULT_PROJECT_ID", "PJ_DEFAULT_ACTIVITY_TYPE_ID",
-                "PJ_DEFAULT_STATUS_ID", "PJ_DEFAULT_PLANNING_MODE_ID",
+                "PJ_DEFAULT_STATUS_ID"
             ]
             for key in keys:
                 value = os.getenv(key, "")
