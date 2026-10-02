@@ -2,3 +2,7 @@
 test.py
 __pycache__
 venv
+/dist/
+build
+test_run_load.py
+test_parse_successor.py

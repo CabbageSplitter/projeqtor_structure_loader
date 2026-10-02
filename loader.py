@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -13,30 +14,33 @@ class ActivityLoader:
         project_id: int,
         activity_type_id: int,
         status_id: int,
-        planning_mode_id: int,
     ):
         self.client = projeqtor_client
         self.project_id = project_id
         self.activity_type_id = activity_type_id
         self.status_id = status_id
-        self.planning_mode_id = planning_mode_id
 
         # Маппинг: WBS-код из Excel -> id в ProjeQtOr
         self.wbs_to_pq_id: dict[str, int] = {}
+
+
 
     def _build_activity_payload(self, wbs: str, row) -> dict:
         """Формирует JSON для создания Activity."""
         # Название = WBS + имя из Excel (по требованию)
         name = f"{wbs} {row['name']}".strip()
-
+        # print(type(row['idActivityPlanningMode']), repr(row['idActivityPlanningMode']))
         payload = {
             "name": name,
             "idActivityType": self.activity_type_id,
             "idProject": self.project_id,
             "idStatus": self.status_id,
             "creationDate": datetime.now().strftime("%Y-%m-%d"),
-            "idActivityPlanningMode": self.planning_mode_id,
+            "idActivityPlanningMode": (1 if pd.isna(row['idActivityPlanningMode']) else int(row['idActivityPlanningMode'])),
             "ActivityPlanningElement": {"progress": 0},
+            "validatedStartDate": str(row['validatedStartDate'].strftime("%Y-%m-%d")),
+            "validatedEndDate": str(row['validatedEndDate'].strftime("%Y-%m-%d"))
+
         }
 
         # Если есть родитель — подставляем его ProjeQtOr id
@@ -48,7 +52,8 @@ class ActivityLoader:
                     f"Проверьте корректность depends_on в Excel."
                 )
             payload["idActivity"] = self.wbs_to_pq_id[parent_wbs]
-
+        # print(1)
+        # print(payload)
         return payload
 
     def load(self, order: list[str], rows_by_wbs: dict) -> dict[str, int]:
@@ -56,7 +61,9 @@ class ActivityLoader:
         total = len(order)
         for idx, wbs in enumerate(order, start=1):
             row = rows_by_wbs[wbs]
+        #     print(row)
             payload = self._build_activity_payload(wbs, row)
+            
 
             result = self.client.post_activity(payload)
             items = result.get("items", [])
@@ -71,5 +78,48 @@ class ActivityLoader:
             logger.info(
                 f"[{idx}/{total}] WBS={wbs} -> ProjeQtOr id={pq_id} | name='{payload['name']}'"
             )
+            # print(self.wbs_to_pq_id)
+        for idx, wbs in enumerate(order, start=1):
+            row = rows_by_wbs[wbs]
+            if pd.isna(row['Successor']) or row['Successor'] == '': continue
+            else:
+                successor_ids = row['Successor'].split(',')
+                if len(successor_ids) > 1:
+                    for successor_id in successor_ids:
+                        successor_id = successor_id.strip()
+                        payload = {
+                            'predecessorRefType': 'Activity',
+                            'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                            'successorRefType': 'Activity',
+                            'successorRefId': self.wbs_to_pq_id[successor_id],
+                            'dependencyType': row['DependencyType'],
+                        }
+                        result_successor=self.client.post_dependency(payload)
+                        items = result_successor.get("items", [])
+                        
+                        if not items or items[0].get("apiResult") != "OK":
+                            raise RuntimeError(
+                                "Ошибка создания Dependency"
+                            )
+                        elif items[0].get("apiResult") == "OK":
+                            print('Dependency создан успешно')
+                else:
+                    payload = {
+                        'predecessorRefType': 'Activity',
+                        'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                        'successorRefType': 'Activity',
+                        'successorRefId': self.wbs_to_pq_id[row['Successor']],
+                        'dependencyType': row['DependencyType'],
+                    }
+                    result_successor=self.client.post_dependency(payload)
+                    items = result_successor.get("items", [])
+                    
+                    if not items or items[0].get("apiResult") != "OK":
+                        raise RuntimeError(
+                            "Ошибка создания Dependency"
+                        )
+                    elif items[0].get("apiResult") == "OK":
+                        print('Dependency создан успешно')
 
         return self.wbs_to_pq_id
+        # return [1, 2]

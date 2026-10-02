@@ -17,6 +17,16 @@ class WBS:
             .str.strip()
             .replace({"nan": "", "None": ""})
         )
+        df["Successor"] = (
+            df["Successor"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .replace({"nan": "", "None": ""})
+        )
+
+        # print(df)
+
         return df
 
     def build_load_order(self):
@@ -54,4 +64,5 @@ class WBS:
         for root in sorted(roots, key=wbs_sort_key):
             dfs(root)
 
+        # print(rows_by_wbs['1.'].get('validatedStartDate'))
         return order, rows_by_wbs
