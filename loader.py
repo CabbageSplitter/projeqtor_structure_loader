@@ -28,7 +28,8 @@ class ActivityLoader:
     def _build_activity_payload(self, wbs: str, row) -> dict:
         """Формирует JSON для создания Activity."""
         # Название = WBS + имя из Excel (по требованию)
-        name = f"{wbs} {row['name']}".strip()
+        # name = f"{wbs} {row['name']}".strip()
+        name = f"{row['name']}".strip()
         # print(type(row['idActivityPlanningMode']), repr(row['idActivityPlanningMode']))
         payload = {
             "name": name,
