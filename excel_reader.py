@@ -6,14 +6,18 @@ class WBS:
 
     def parse_excel(self) -> pd.DataFrame:
         """Парсит Excel и нормализует колонки id / depends_on в строки."""
-        df = pd.read_excel(self.path)
+        df = pd.read_excel(self.path, dtype={
+            'id':str,
+            'depends_on': str,
+            'Successor': str
+            })
 
         # Приводим WBS-коды к строкам и убираем пробелы
         df["id"] = df["id"].astype(str).str.strip()
         df["depends_on"] = (
             df["depends_on"]
             .fillna("")
-            .astype(str)
+            # .astype(str)
             .str.strip()
             .replace({"nan": "", "None": ""})
         )
