@@ -28,8 +28,8 @@ class ActivityLoader:
     def _build_activity_payload(self, wbs: str, row) -> dict:
         """Формирует JSON для создания Activity."""
         # Название = WBS + имя из Excel (по требованию)
-        # name = f"{wbs} {row['name']}".strip()
-        name = f"{row['name']}".strip()
+        name = f"{wbs} {row['name']}".strip()
+        # name = f"{row['name']}".strip()
         # print(type(row['idActivityPlanningMode']), repr(row['idActivityPlanningMode']))
         payload = {
             "name": name,
@@ -48,11 +48,17 @@ class ActivityLoader:
         parent_wbs = row["depends_on"]
         if parent_wbs:
             if parent_wbs not in self.wbs_to_pq_id:
-                raise RuntimeError(
-                    f"Родитель '{parent_wbs}' для '{wbs}' ещё не загружен. "
-                    f"Проверьте корректность depends_on в Excel."
-                )
-            payload["idActivity"] = self.wbs_to_pq_id[parent_wbs]
+                # raise RuntimeError(
+                #     f"Родитель '{parent_wbs}' для '{wbs}' ещё не загружен. "
+                #     f"Проверьте корректность depends_on в Excel."
+                # )
+                activities_in_project = self.client.get_activities(self.project_id)
+                for activity in activities_in_project["items"]:
+                    if activity["name"].startswith(str(parent_wbs) + ' '):
+                        payload["idActivity"] = activity["id"]
+                        break
+            else:       
+                payload["idActivity"] = self.wbs_to_pq_id[parent_wbs]
         # print(1)
         # print(payload)
         return payload

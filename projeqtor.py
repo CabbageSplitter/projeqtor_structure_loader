@@ -62,7 +62,7 @@ class Projeqtor:
 
     def post_activity(self, activity_data: dict):
         url = f"{self.base_url}/api/index.php?uri=Activity"
-        print(self.base_url)
+        # print(self.base_url)
         json_payload = json.dumps(activity_data, ensure_ascii=False)
         encrypted_data = self._encrypt_data(json_payload)
         
@@ -75,7 +75,9 @@ class Projeqtor:
             auth=httpx.BasicAuth(username=self.username, password=self.password),
             timeout=15.0
         ) as client:
-            response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
+            # response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
+            response = client.post(url, content=encrypted_data)
+
             
             content_type = response.headers.get("content-type", "")
             if "text/html" in content_type:
@@ -84,12 +86,12 @@ class Projeqtor:
                 )
             
             response.raise_for_status()
-            print(response.status_code)
+            # print(response.status_code)
             return self._safe_json_parse(response)
 
     def post_dependency(self, dependency_data:dict):
         url = f"{self.base_url}/api/index.php?uri=Dependency"
-        print(self.base_url)
+        # print(self.base_url)
         json_payload = json.dumps(dependency_data, ensure_ascii=False)
         encrypted_data = self._encrypt_data(json_payload)
         
@@ -102,7 +104,9 @@ class Projeqtor:
             auth=httpx.BasicAuth(username=self.username, password=self.password),
             timeout=15.0
         ) as client:
-            response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
+            # response = client.post(url, content=encrypted_data, extensions={"trace": self.log})
+            response = client.post(url, content=encrypted_data)
+
             
             content_type = response.headers.get("content-type", "")
             if "text/html" in content_type:
@@ -111,7 +115,7 @@ class Projeqtor:
                 )
             
             response.raise_for_status()
-            print(response.status_code)
+            # print(response.status_code)
             return self._safe_json_parse(response)
     
     def _safe_json_parse(self, response):
@@ -145,6 +149,26 @@ class Projeqtor:
         """Универсальный GET-запрос для чтения объектов."""
         url = f"{self.base_url}/api/index.php?uri={class_name}/all"
         # url = f"{self.base_url}/api/{class_name}/all"
+        with httpx.Client(
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx"},
+            auth=httpx.BasicAuth(username=self.username, password=self.password),
+            timeout=15.0
+        ) as client:
+            response = client.get(url)
+            
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type:
+                raise RuntimeError(
+                    "Сервер вернул HTML вместо JSON. "
+                    "Проверьте, включен ли API."
+                )
+            
+            response.raise_for_status()
+            return self._safe_json_parse(response)
+
+    def get_activities(self, project_id: str):
+        url = f"{self.base_url}/api/index.php?uri=Activity/search/idProject={project_id}"
         with httpx.Client(
             follow_redirects=True,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Python-httpx"},

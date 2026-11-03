@@ -50,6 +50,8 @@ class WBS:
             parent = row["depends_on"]
             if not parent:
                 roots.append(wbs)
+            elif row["depends_on"] not in rows_by_wbs:
+                roots.append(wbs)
             else:
                 children.setdefault(parent, []).append(wbs)
 
