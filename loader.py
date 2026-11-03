@@ -85,22 +85,37 @@ class ActivityLoader:
             logger.info(
                 f"[{idx}/{total}] WBS={wbs} -> ProjeQtOr id={pq_id} | name='{payload['name']}'"
             )
-            # print(self.wbs_to_pq_id)
+        # print(self.wbs_to_pq_id)
         for idx, wbs in enumerate(order, start=1):
             row = rows_by_wbs[wbs]
             if pd.isna(row['Successor']) or row['Successor'] == '': continue
             else:
                 successor_ids = row['Successor'].split(',')
-                if len(successor_ids) > 1:
+                if len(successor_ids) >= 1:
                     for successor_id in successor_ids:
                         successor_id = successor_id.strip()
-                        payload = {
-                            'predecessorRefType': 'Activity',
-                            'predecessorRefId': self.wbs_to_pq_id[row['id']],
-                            'successorRefType': 'Activity',
-                            'successorRefId': self.wbs_to_pq_id[successor_id],
-                            'dependencyType': row['DependencyType'],
-                        }
+                        if successor_id in list(self.wbs_to_pq_id.keys()):
+                            payload = {
+                                'predecessorRefType': 'Activity',
+                                'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                                'successorRefType': 'Activity',
+                                'successorRefId': self.wbs_to_pq_id[successor_id],
+                                'dependencyType': row['DependencyType'],
+                            }
+                        else:
+                            activities_in_project = self.client.get_activities(self.project_id)
+                            for activity in activities_in_project["items"]:
+                                if activity["name"].startswith(str(successor_id) + ' '):
+                                    payload["idActivity"] = activity["id"]
+                                    payload = {
+                                        'predecessorRefType': 'Activity',
+                                        'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                                        'successorRefType': 'Activity',
+                                        'successorRefId': activity["id"],
+                                        'dependencyType': row['DependencyType'],
+                                    }
+                                    break
+                            
                         result_successor=self.client.post_dependency(payload)
                         items = result_successor.get("items", [])
                         
@@ -110,23 +125,23 @@ class ActivityLoader:
                             )
                         elif items[0].get("apiResult") == "OK":
                             print('Dependency создан успешно')
-                else:
-                    payload = {
-                        'predecessorRefType': 'Activity',
-                        'predecessorRefId': self.wbs_to_pq_id[row['id']],
-                        'successorRefType': 'Activity',
-                        'successorRefId': self.wbs_to_pq_id[row['Successor']],
-                        'dependencyType': row['DependencyType'],
-                    }
-                    result_successor=self.client.post_dependency(payload)
-                    items = result_successor.get("items", [])
+                # else:
+                #     payload = {
+                #         'predecessorRefType': 'Activity',
+                #         'predecessorRefId': self.wbs_to_pq_id[row['id']],
+                #         'successorRefType': 'Activity',
+                #         'successorRefId': self.wbs_to_pq_id[row['Successor']],
+                #         'dependencyType': row['DependencyType'],
+                #     }
+                #     result_successor=self.client.post_dependency(payload)
+                #     items = result_successor.get("items", [])
                     
-                    if not items or items[0].get("apiResult") != "OK":
-                        raise RuntimeError(
-                            "Ошибка создания Dependency"
-                        )
-                    elif items[0].get("apiResult") == "OK":
-                        print('Dependency создан успешно')
+                #     if not items or items[0].get("apiResult") != "OK":
+                #         raise RuntimeError(
+                #             "Ошибка создания Dependency"
+                #         )
+                #     elif items[0].get("apiResult") == "OK":
+                #         print('Dependency создан успешно')
 
         return self.wbs_to_pq_id
         # return [1, 2]
